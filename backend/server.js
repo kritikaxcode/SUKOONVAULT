@@ -410,7 +410,27 @@ app.get("/api/appointments", authenticateToken, async (req, res) => {
     });
   }
 });
+app.get("/api/emergency-resources", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, description, contact, available_24x7
+       FROM emergency_resources
+       ORDER BY id`
+    );
 
+    res.json({
+      success: true,
+      resources: result.rows,
+    });
+  } catch (error) {
+    console.error("Emergency resources error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch emergency resources",
+    });
+  }
+});
 
 // Start server
 app.listen(PORT, () => {
