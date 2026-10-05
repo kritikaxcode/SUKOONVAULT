@@ -505,6 +505,31 @@ console.log("Gemini response data:", data);
   }
 });
 
+app.get("/api/analytics/overview", async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT
+        COUNT(*) AS total_check_ins,
+        ROUND(AVG(mood), 2) AS average_mood,
+        ROUND(AVG(stress_level), 2) AS average_stress,
+        ROUND(AVG(sleep_hours), 2) AS average_sleep_hours
+      FROM check_ins
+    `);
+
+    res.json({
+      success: true,
+      analytics: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Analytics error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch analytics",
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`SUKOONVAULT server running on http://localhost:${PORT}`);
