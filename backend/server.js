@@ -487,20 +487,54 @@ console.log("Gemini response data:", data);
       });
     }
 
-    res.json({
-      success: true,
-      reply: data.steps
-  ?.find((step) => step.type === "model_output")
-  ?.content
-  ?.map((item) => item.text || "")
-  .join("") || "Sorry, I could not generate a response.",
-    });
+    const aiReply =
+  data.steps
+    ?.find((step) => step.type === "model_output")
+    ?.content
+    ?.map((item) => item.text || "")
+    .join("") || "Sorry, I could not generate a response.";
+
+await pool.query(
+  `INSERT INTO ai_chats (user_id, user_message, ai_response)
+   VALUES ($1, $2, $3)`,
+  [req.user.userId, message, aiReply]
+);
+
+res.json({
+  success: true,
+  reply: aiReply,
+});
+
   } catch (error) {
     console.error("AI chat error:", error.message);
 
     res.status(500).json({
       success: false,
       message: "Failed to generate AI response",
+    });
+  }
+});
+
+app.get("/api/ai/history", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, user_message, ai_response, created_at
+       FROM ai_chats
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.userId]
+    );
+
+    res.json({
+      success: true,
+      chats: result.rows,
+    });
+  } catch (error) {
+    console.error("AI history error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch AI chat history",
     });
   }
 });
@@ -531,6 +565,6 @@ app.get("/api/analytics/overview", async (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`SUKOONVAULT server running on http://localhost:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`SUKOONVAULT server running on port ${PORT}`);
 });
