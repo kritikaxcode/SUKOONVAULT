@@ -242,6 +242,70 @@ app.get("/api/profile", authenticateToken, async (req, res) => {
   }
 });
 
+app.post("/api/check-ins", authenticateToken, async (req, res) => {
+  try {
+    const { mood, stress_level, sleep_hours, note } = req.body;
+
+    if (!mood || !stress_level) {
+      return res.status(400).json({
+        success: false,
+        message: "Mood and stress level are required",
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO check_ins
+       (user_id, mood, stress_level, sleep_hours, note)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [
+        req.user.userId,
+        mood,
+        stress_level,
+        sleep_hours || null,
+        note || null,
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Check-in saved successfully",
+      checkIn: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Check-in error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to save check-in",
+    });
+  }
+});
+
+app.get("/api/check-ins", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, mood, stress_level, sleep_hours, note, created_at
+       FROM check_ins
+       WHERE user_id = $1
+       ORDER BY created_at DESC`,
+      [req.user.userId]
+    );
+
+    res.json({
+      success: true,
+      checkIns: result.rows,
+    });
+  } catch (error) {
+    console.error("Check-in history error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch check-ins",
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`SUKOONVAULT server running on http://localhost:${PORT}`);
