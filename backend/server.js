@@ -6,8 +6,10 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
 
+
 const app = express();
 const PORT = 5000;
+
 
 // Middleware
 app.use(express.json());
@@ -428,6 +430,77 @@ app.get("/api/emergency-resources", async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch emergency resources",
+    });
+  }
+});
+
+app.post("/api/ai/chat", authenticateToken, async (req, res) => {
+  try {
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Message is required",
+      });
+    }
+
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/interactions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": process.env.GEMINI_API_KEY,
+        },
+        body: JSON.stringify({
+          model: "gemini-3.8-flash",
+          input: `
+You are SUKOONVAULT, a supportive mental-health companion for college students.
+
+Rules:
+- Be empathetic, calm, and non-judgmental.
+- Do not diagnose mental-health conditions.
+- Do not claim to be a therapist or doctor.
+- Give practical, general wellbeing guidance.
+- Encourage professional help when appropriate.
+- If the student appears to be in immediate danger or may harm themselves or someone else, encourage them to contact emergency services or a qualified mental-health professional immediately.
+
+Student message:
+${message}
+          `,
+        }),
+      }
+    );
+
+    const data = await response.json();
+
+    console.log("Gemini response status:", response.status);
+console.log("Gemini response data:", data);
+
+    if (!response.ok) {
+      console.error("Gemini API error:", data);
+
+      return res.status(500).json({
+        success: false,
+        message: "Gemini API request failed",
+      });
+    }
+
+    res.json({
+      success: true,
+      reply: data.steps
+  ?.find((step) => step.type === "model_output")
+  ?.content
+  ?.map((item) => item.text || "")
+  .join("") || "Sorry, I could not generate a response.",
+    });
+  } catch (error) {
+    console.error("AI chat error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate AI response",
     });
   }
 });
