@@ -306,6 +306,112 @@ app.get("/api/check-ins", authenticateToken, async (req, res) => {
   }
 });
 
+app.get("/api/counsellors", async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, name, specialization, email, phone, available
+       FROM counsellors
+       WHERE available = TRUE
+       ORDER BY id`
+    );
+
+    res.json({
+      success: true,
+      counsellors: result.rows,
+    });
+  } catch (error) {
+    console.error("Counsellors error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch counsellors",
+    });
+  }
+});
+app.post("/api/appointments", authenticateToken, async (req, res) => {
+  try {
+    const { counsellor_id, appointment_date, note } = req.body;
+
+    if (!counsellor_id || !appointment_date) {
+      return res.status(400).json({
+        success: false,
+        message: "Counsellor and appointment date are required",
+      });
+    }
+
+    const counsellor = await pool.query(
+      "SELECT id FROM counsellors WHERE id = $1 AND available = TRUE",
+      [counsellor_id]
+    );
+
+    if (counsellor.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Counsellor not available",
+      });
+    }
+
+    const result = await pool.query(
+      `INSERT INTO appointments
+       (user_id, counsellor_id, appointment_date, note)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [
+        req.user.userId,
+        counsellor_id,
+        appointment_date,
+        note || null,
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Appointment request submitted",
+      appointment: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Appointment error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to create appointment",
+    });
+  }
+});
+
+app.get("/api/appointments", authenticateToken, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT
+         a.id,
+         a.appointment_date,
+         a.status,
+         a.note,
+         a.created_at,
+         c.name AS counsellor_name,
+         c.specialization
+       FROM appointments a
+       JOIN counsellors c ON a.counsellor_id = c.id
+       WHERE a.user_id = $1
+       ORDER BY a.appointment_date ASC`,
+      [req.user.userId]
+    );
+
+    res.json({
+      success: true,
+      appointments: result.rows,
+    });
+  } catch (error) {
+    console.error("Appointments error:", error.message);
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch appointments",
+    });
+  }
+});
+
+
 // Start server
 app.listen(PORT, () => {
   console.log(`SUKOONVAULT server running on http://localhost:${PORT}`);
