@@ -1,384 +1,906 @@
-function App() {
+
+import { useState, useEffect, useRef } from "react";
+import "./App.css";
+
+import Dashboard from "./Dashboard";
+import CheckIn from "./CheckIn";
+import MindGames from "./MindGames";
+import Decorations from "./Decorations";
+import Meditation from "./Meditation";
+import { translations } from "./translations";
+
+const SUPABASE_FUNCTION_URL = import.meta.env.VITE_SUPABASE_FUNCTION_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const extra = {
+  en: {
+    badge: "A private support space for students",
+    hero1: "Your feelings matter.",
+    hero2: "You don't have to handle everything alone.",
+    heroDescription:
+      "SukoonVault gives students a private space to express their thoughts, reflect on their wellbeing and find appropriate support when they need it.",
+    talk: "Talk to Sukoon Assistant",
+    how: "How it works",
+    private: "Private space",
+    privateDesc: "Share at your own pace",
+    guided: "Guided support",
+    guidedDesc: "Find helpful resources",
+    conversation: "A supportive conversation",
+    placeholder: "Tell me what you're feeling...",
+    micStart: "🎙 MIC",
+    micStop: "■ STOP",
+    disclaimer:
+      "Support tool only — not a replacement for professional care.",
+    ragTitle: "Resource information used",
+    ragDescription:
+      "This response used relevant information from the SukoonVault resource library.",
+    mild: "You can continue talking with Sukoon Assistant. If things feel overwhelming, professional support is also available.",
+    moderateTitle: "You deserve some extra support.",
+    moderateDescription:
+      "Based on what you shared, speaking with a counsellor may be helpful.",
+    highTitle: "Immediate support is important.",
+    highDescription:
+      "If you are in immediate danger or feel that you may hurt yourself, contact emergency support or a trusted person right now.",
+    featuresHeading: "Support designed around students.",
+    featuresDescription:
+      "SukoonVault combines conversational support, safety triage and access to additional resources.",
+    feature1: "A conversational space where students can express their thoughts and receive supportive guidance.",
+    feature2:
+      "When additional support is needed, the system can display available counsellor information.",
+    feature3:
+      "Elevated-risk situations can surface emergency and crisis resources.",
+    howHeading: "From check-in to support.",
+    howDescription:
+      "The system is designed to provide supportive guidance and show relevant resources when appropriate.",
+    step1: "Share what you're experiencing in your own words.",
+    step2:
+      "The AI and safety layer evaluates the conversation and assigns a support level.",
+    step3:
+      "Continue the conversation or view counsellor and emergency resources when appropriate.",
+    aboutHeading: "A supportive digital space for student wellbeing.",
+    aboutDescription:
+      "SukoonVault is designed around private conversations, supportive resources, safety triage and human support. It does not replace professional mental-health care.",
+    footer: "Built for student wellbeing.",
+    footerTagline: "Privacy-first · Supportive · Human-centered",
+    voiceHint: "Choose a language for voice input:",
+    hindi: "Hindi",
+    english: "English",
+    language: "Language",
+    errorTitle: "Something went wrong",
+    contact: "Call",
+    voiceUnavailable: "Voice input is unavailable in this browser.",
+    voicePermission: "Allow microphone access in your browser settings.",
+    voiceNoSpeech: "No speech detected. Please try again.",
+    voiceNetwork: "Speech service network error. Try Chrome or type your message.",
+    voiceError: "Voice input failed. Please try again.",
+    listening: "Listening... Speak now.",
+    starting: "Starting microphone...",
+    stopped: "Voice input stopped.",
+    secure: "Use localhost or HTTPS to access the microphone.",
+    missingUrl: "Supabase function URL is missing in your .env file.",
+    missingKey: "Supabase API key is missing in your .env file.",
+    connection: "Connection error: ",
+    fallback: "I'm here to listen. Tell me more about what you're experiencing.",
+    ready: "Ready",
+    thinking: "Thinking...",
+    about: "About SukoonVault",
+    featureLabel: "Features",
+    howLabel: "How it works",
+    wellbeing: "Your wellbeing",
+    dashboard: "Personal Dashboard",
+    checkinPrompt: "Take a moment to check in with yourself."
+  },
+  hi: {
+    badge: "छात्रों के लिए एक निजी सहायता स्थान",
+    hero1: "आपकी भावनाएँ मायने रखती हैं।",
+    hero2: "आपको सब कुछ अकेले संभालने की ज़रूरत नहीं है।",
+    heroDescription:
+      "सुकून वॉल्ट छात्रों को अपने विचार साझा करने, अपनी भावनात्मक स्थिति समझने और ज़रूरत पड़ने पर सहायता पाने के लिए एक निजी जगह देता है।",
+    talk: "सुकून सहायक से बात करें",
+    how: "यह कैसे काम करता है",
+    private: "निजी जगह",
+    privateDesc: "अपनी गति से बातें साझा करें",
+    guided: "मार्गदर्शन",
+    guidedDesc: "उपयोगी संसाधन पाएँ",
+    conversation: "सहयोगपूर्ण बातचीत",
+    placeholder: "बताएँ कि आप कैसा महसूस कर रहे हैं...",
+    micStart: "🎙 बोलें",
+    micStop: "■ रोकें",
+    disclaimer:
+      "यह सहायता का एक साधन है, पेशेवर देखभाल का विकल्प नहीं।",
+    ragTitle: "इस्तेमाल की गई संसाधन जानकारी",
+    ragDescription:
+      "इस जवाब में सुकून वॉल्ट की संसाधन लाइब्रेरी से संबंधित जानकारी का इस्तेमाल हुआ।",
+    mild: "आप सुकून सहायक से बात जारी रख सकते हैं। यदि स्थिति बहुत मुश्किल लगे, तो पेशेवर सहायता भी उपलब्ध है।",
+    moderateTitle: "आपको अतिरिक्त सहायता मिलनी चाहिए।",
+    moderateDescription:
+      "आपने जो साझा किया है, उसके आधार पर किसी काउंसलर से बात करना उपयोगी हो सकता है।",
+    highTitle: "तुरंत सहायता लेना ज़रूरी है।",
+    highDescription:
+      "यदि आप तत्काल खतरे में हैं या खुद को नुकसान पहुँचाने का डर है, तो अभी किसी भरोसेमंद व्यक्ति या आपातकालीन सेवा से संपर्क करें।",
+    featuresHeading: "छात्रों के लिए बनाई गई सहायता।",
+    featuresDescription:
+      "सुकून वॉल्ट बातचीत के ज़रिए सहायता, सुरक्षा मूल्यांकन और उपयोगी संसाधन उपलब्ध कराता है।",
+    feature1:
+      "एक ऐसी जगह जहाँ छात्र अपने विचार साझा कर सकते हैं और सहयोगपूर्ण मार्गदर्शन पा सकते हैं।",
+    feature2:
+      "अतिरिक्त सहायता की ज़रूरत होने पर उपलब्ध काउंसलर की जानकारी दिखाई जा सकती है।",
+    feature3:
+      "अधिक जोखिम वाली स्थितियों में आपातकालीन और संकट सहायता संसाधन दिखाए जा सकते हैं।",
+    howHeading: "चेक-इन से सहायता तक।",
+    howDescription:
+      "यह सिस्टम सहयोगपूर्ण मार्गदर्शन देने और ज़रूरत पड़ने पर संबंधित संसाधन दिखाने के लिए बनाया गया है।",
+    step1: "अपने अनुभव को अपने शब्दों में साझा करें।",
+    step2:
+      "AI और सुरक्षा प्रणाली बातचीत का मूल्यांकन करके सहायता का स्तर निर्धारित करती है।",
+    step3:
+      "बातचीत जारी रखें या ज़रूरत के अनुसार काउंसलर और आपातकालीन संसाधन देखें।",
+    aboutHeading: "छात्रों की भावनात्मक भलाई के लिए एक सहयोगपूर्ण डिजिटल जगह।",
+    aboutDescription:
+      "सुकून वॉल्ट निजी बातचीत, उपयोगी संसाधनों और मानवीय सहायता पर केंद्रित है। यह पेशेवर मानसिक स्वास्थ्य देखभाल का विकल्प नहीं है।",
+    footer: "छात्रों की भलाई के लिए बनाया गया।",
+    footerTagline: "निजता · सहयोग · संवेदनशीलता",
+    voiceHint: "आवाज़ के लिए भाषा चुनें:",
+    hindi: "हिंदी",
+    english: "अंग्रेज़ी",
+    language: "भाषा",
+    errorTitle: "कुछ समस्या हुई",
+    contact: "कॉल करें",
+    voiceUnavailable: "इस ब्राउज़र में आवाज़ से लिखने की सुविधा उपलब्ध नहीं है।",
+    voicePermission: "ब्राउज़र सेटिंग्स में माइक्रोफ़ोन की अनुमति दें।",
+    voiceNoSpeech: "कोई आवाज़ नहीं मिली। कृपया दोबारा कोशिश करें।",
+    voiceNetwork:
+      "आवाज़ पहचानने में नेटवर्क की समस्या आई। Chrome इस्तेमाल करें या संदेश लिखें।",
+    voiceError: "आवाज़ से लिखने में समस्या आई। कृपया दोबारा कोशिश करें।",
+    listening: "सुन रहा है... अब बोलें।",
+    starting: "माइक्रोफ़ोन शुरू हो रहा है...",
+    stopped: "आवाज़ से लिखना बंद कर दिया गया।",
+    secure: "माइक्रोफ़ोन के लिए localhost या HTTPS इस्तेमाल करें।",
+    missingUrl: ".env फ़ाइल में Supabase function URL उपलब्ध नहीं है।",
+    missingKey: ".env फ़ाइल में Supabase API key उपलब्ध नहीं है।",
+    connection: "कनेक्शन में समस्या: ",
+    fallback: "मैं आपकी बात सुनने के लिए यहाँ हूँ। बताइए कि आप क्या महसूस कर रहे हैं।",
+    ready: "तैयार",
+    thinking: "जवाब तैयार हो रहा है...",
+    about: "सुकून वॉल्ट के बारे में",
+    featureLabel: "विशेषताएँ",
+    howLabel: "यह कैसे काम करता है",
+    wellbeing: "आपकी भावनात्मक भलाई",
+    dashboard: "व्यक्तिगत डैशबोर्ड",
+    checkinPrompt: "एक पल निकालकर अपनी भावनाओं को समझें।"
+  }
+};
+
+function FeatureCard({ icon, title, description }) {
   return (
-    <div className="min-h-screen bg-[#070711] text-white">
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-4 text-2xl">{icon}</div>
+      <h3 className="mb-2 text-lg font-semibold text-slate-800">{title}</h3>
+      <p className="text-sm leading-6 text-slate-600">{description}</p>
+    </div>
+  );
+}
 
-      {/* NAVBAR */}
-      <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-[#070711]/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+function Step({ number, title, description }) {
+  return (
+    <div className="flex gap-5">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-100 font-bold text-green-800">
+        {number}
+      </div>
+      <div>
+        <h3 className="font-semibold text-slate-800">{title}</h3>
+        <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p>
+      </div>
+    </div>
+  );
+}
 
-          <div>
-            <h1 className="text-2xl font-bold">
-              SUKOON
-              <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">
-                VAULT
-              </span>
-            </h1>
+function RiskBadge({ risk, language }) {
+  if (!risk) return null;
 
-            <p className="text-[9px] tracking-[0.25em] text-gray-500">
-              YOUR SPACE TO BREATHE
-            </p>
+  const labels = {
+    en: { mild: "Mild support level", moderate: "Moderate support level", high: "High support level" },
+    hi: { mild: "कम सहायता स्तर", moderate: "मध्यम सहायता स्तर", high: "उच्च सहायता स्तर" }
+  };
+
+  const styles = {
+    mild: "border-green-200 bg-green-50 text-green-800",
+    moderate: "border-amber-200 bg-amber-50 text-amber-800",
+    high: "border-red-200 bg-red-50 text-red-800"
+  };
+
+  return (
+    <div className={`mb-3 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${styles[risk] || styles.mild}`}>
+      {labels[language][risk] || labels[language].mild}
+    </div>
+  );
+}
+
+function CounsellorCard({ counsellor, language }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <h4 className="font-semibold text-slate-800">{counsellor.name}</h4>
+      <p className="mt-1 text-sm text-green-700">{counsellor.specialization}</p>
+      {counsellor.email && <p className="mt-3 break-words text-sm text-slate-600">Email: {counsellor.email}</p>}
+      {counsellor.phone && <p className="mt-1 text-sm text-slate-600">{language === "hi" ? "फ़ोन" : "Phone"}: {counsellor.phone}</p>}
+    </div>
+  );
+}
+
+function EmergencyCard({ resource, language }) {
+  const cleanContact = String(resource.contact || "").replace(/[^0-9+]/g, "");
+
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+      <h4 className="font-semibold text-slate-800">{resource.name}</h4>
+      <p className="mt-2 text-sm text-slate-600">{resource.description}</p>
+      {cleanContact && (
+        <a href={`tel:${cleanContact}`} className="mt-4 inline-block rounded-lg bg-red-700 px-4 py-2 font-semibold text-white">
+          {language === "hi" ? "कॉल करें" : "Call"} {resource.contact}
+        </a>
+      )}
+    </div>
+  );
+}
+
+function App() {
+  const [language, setLanguage] = useState(() => {
+    try {
+      const saved = localStorage.getItem("sukoonvault_language");
+      return saved === "hi" ? "hi" : "en";
+    } catch {
+      return "en";
+    }
+  });
+
+  const t = translations[language] || translations.en;
+  const x = extra[language] || extra.en;
+
+  const [messages, setMessages] = useState(() => [
+    {
+      role: "assistant",
+      text:
+        language === "hi"
+          ? "नमस्ते, मैं सुकून सहायक हूँ। आप मुझसे अपनी किसी भी परेशानी के बारे में बात कर सकते हैं।"
+          : "Hi, I'm Sukoon Assistant. You can talk to me about anything you're going through."
+    }
+  ]);
+
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [riskLevel, setRiskLevel] = useState(null);
+  const [counsellors, setCounsellors] = useState([]);
+  const [emergencyResources, setEmergencyResources] = useState([]);
+  const [sources, setSources] = useState([]);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceError, setVoiceError] = useState("");
+
+  const recognitionRef = useRef(null);
+  const listeningRef = useRef(false);
+  const restartTimerRef = useRef(null);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("sukoonvault_language", language);
+    } catch {
+      // The language still works for this session if storage is unavailable.
+    }
+
+    document.documentElement.lang = language === "hi" ? "hi" : "en";
+  }, [language]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (!SpeechRecognition) {
+      setVoiceError(x.voiceUnavailable);
+      return () => {
+        mountedRef.current = false;
+      };
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = language === "hi" ? "hi-IN" : "en-IN";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    recognitionRef.current = recognition;
+
+    recognition.onstart = () => {
+      if (!mountedRef.current) return;
+      setIsListening(true);
+      setVoiceError(x.listening);
+    };
+
+    recognition.onresult = (event) => {
+      if (!mountedRef.current) return;
+
+      let finalText = "";
+      let interimText = "";
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result[0].transcript;
+
+        if (result.isFinal) finalText += transcript;
+        else interimText += transcript;
+      }
+
+      if (finalText.trim()) {
+        const spokenText = finalText.trim();
+        setInput((previous) => previous ? `${previous} ${spokenText}` : spokenText);
+      }
+
+      if (interimText.trim()) setVoiceError(interimText.trim());
+      else if (listeningRef.current) setVoiceError(x.listening);
+    };
+
+    recognition.onerror = (event) => {
+      if (!mountedRef.current) return;
+
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        listeningRef.current = false;
+        setIsListening(false);
+        setVoiceError(x.voicePermission);
+      } else if (event.error === "no-speech") {
+        setVoiceError(x.voiceNoSpeech);
+      } else if (event.error === "network") {
+        setVoiceError(x.voiceNetwork);
+      } else if (event.error !== "aborted") {
+        setVoiceError(x.voiceError);
+      }
+    };
+
+    recognition.onend = () => {
+      if (!mountedRef.current) return;
+
+      if (!listeningRef.current) {
+        setIsListening(false);
+        return;
+      }
+
+      clearTimeout(restartTimerRef.current);
+      restartTimerRef.current = setTimeout(() => {
+        if (!mountedRef.current || !listeningRef.current) return;
+
+        try {
+          recognition.start();
+        } catch {
+          setVoiceError(x.voiceError);
+          setIsListening(false);
+          listeningRef.current = false;
+        }
+      }, 500);
+    };
+
+    return () => {
+      mountedRef.current = false;
+      listeningRef.current = false;
+      clearTimeout(restartTimerRef.current);
+
+      recognition.onstart = null;
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+
+      try {
+        recognition.stop();
+      } catch {
+        // Recognition may already be stopped.
+      }
+
+      recognitionRef.current = null;
+    };
+  }, [language]);
+
+  const toggleVoiceInput = () => {
+    const recognition = recognitionRef.current;
+
+    if (!recognition) {
+      setVoiceError(x.voiceUnavailable);
+      return;
+    }
+
+    if (listeningRef.current) {
+      listeningRef.current = false;
+      clearTimeout(restartTimerRef.current);
+
+      try {
+        recognition.stop();
+      } catch {
+        // Ignore if recognition is already stopped.
+      }
+
+      setIsListening(false);
+      setVoiceError(x.stopped);
+      return;
+    }
+
+    if (!window.isSecureContext) {
+      setVoiceError(x.secure);
+      return;
+    }
+
+    listeningRef.current = true;
+    setVoiceError(x.starting);
+
+    try {
+      recognition.start();
+    } catch {
+      listeningRef.current = false;
+      setIsListening(false);
+      setVoiceError(x.voiceError);
+    }
+  };
+
+  const sendMessage = async () => {
+    const trimmedMessage = input.trim();
+    if (!trimmedMessage || loading) return;
+
+    if (!SUPABASE_FUNCTION_URL || !SUPABASE_ANON_KEY) {
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "user",
+          text: trimmedMessage
+        },
+        {
+          role: "assistant",
+          text: !SUPABASE_FUNCTION_URL ? x.missingUrl : x.missingKey
+        }
+      ]);
+      setInput("");
+      return;
+    }
+
+    setMessages((previous) => [
+      ...previous,
+      { role: "user", text: trimmedMessage }
+    ]);
+
+    setInput("");
+    setLoading(true);
+
+    try {
+      let sessionId = sessionStorage.getItem("sukoonvault_session");
+
+      if (!sessionId) {
+        sessionId = crypto.randomUUID();
+        sessionStorage.setItem("sukoonvault_session", sessionId);
+      }
+
+      const response = await fetch(SUPABASE_FUNCTION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({
+          sessionId,
+          message: trimmedMessage,
+          language,
+          preferredLanguage: language === "hi" ? "Hindi" : "English"
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Request failed");
+      }
+
+      setRiskLevel(data.riskLevel || "mild");
+      setCounsellors(Array.isArray(data.counsellors) ? data.counsellors : []);
+      setEmergencyResources(
+        Array.isArray(data.emergencyResources) ? data.emergencyResources : []
+      );
+      setSources(Array.isArray(data.sources) ? data.sources : []);
+
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "assistant",
+          text:
+            data.response ||
+            (language === "hi"
+              ? "मैं आपकी बात सुन रहा हूँ। कृपया थोड़ा और बताएँ कि आप क्या महसूस कर रहे हैं।"
+              : x.fallback)
+        }
+      ]);
+    } catch (error) {
+      console.error("CHAT ERROR:", error);
+
+      setMessages((previous) => [
+        ...previous,
+        {
+          role: "assistant",
+          text: x.connection + (error.message || "Failed to fetch")
+        }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const scrollToSupport = () => {
+    document.getElementById("support")?.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  };
+
+  return (
+    <div className="min-h-screen overflow-x-hidden bg-[#f4f6ed] text-slate-800">
+      <Decorations />
+
+      <nav className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-5 py-4">
+          <a href="#home" className="text-xl font-bold tracking-wide">
+            SUKOON<span className="text-green-700">VAULT</span>
+          </a>
+
+          <div className="flex items-center gap-2">
+            <label htmlFor="language-select" className="text-sm text-slate-600">
+              {x.language}
+            </label>
+            <select
+              id="language-select"
+              value={language}
+              onChange={(event) => setLanguage(event.target.value)}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-800"
+              aria-label={x.language}
+            >
+              <option value="en">English</option>
+              <option value="hi">हिंदी</option>
+            </select>
           </div>
 
-          <div className="hidden gap-8 md:flex">
-            <a href="#home" className="text-gray-300 hover:text-white">
-              Home
-            </a>
-
-            <a href="#features" className="text-gray-300 hover:text-white">
-              Features
-            </a>
-
-            <a href="#how" className="text-gray-300 hover:text-white">
-              How It Works
-            </a>
-
-            <a href="#about" className="text-gray-300 hover:text-white">
-              About
-            </a>
+          <div className="hidden items-center gap-5 text-sm text-slate-600 lg:flex">
+            <a href="#home">{t.home}</a>
+            <a href="#support">{t.chat}</a>
+            <a href="#dashboard">{t.dashboard}</a>
+            <a href="#features">{t.features}</a>
+            <a href="#how">{t.howItWorks}</a>
+            <button
+              onClick={scrollToSupport}
+              className="rounded-lg bg-[#557c60] px-4 py-2 font-medium text-white"
+            >
+              {t.getSupport}
+            </button>
           </div>
 
-          <button className="rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 px-5 py-2.5 font-semibold transition hover:scale-105">
-            Get Support
+          <button
+            onClick={scrollToSupport}
+            className="rounded-lg bg-[#557c60] px-4 py-2 text-sm font-medium text-white lg:hidden"
+          >
+            {t.getSupport}
           </button>
-
         </div>
       </nav>
 
-
-      {/* HERO */}
-      <section
-        id="home"
-        className="relative flex min-h-screen items-center overflow-hidden px-6 pt-24"
-      >
-
-        {/* Background glow */}
-        <div className="absolute left-1/4 top-1/4 h-96 w-96 rounded-full bg-purple-600/20 blur-[120px]" />
-
-        <div className="absolute right-1/4 top-1/3 h-80 w-80 rounded-full bg-cyan-500/10 blur-[120px]" />
-
-
-        <div className="relative mx-auto grid max-w-7xl items-center gap-16 md:grid-cols-2">
-
-          {/* LEFT */}
+      <section id="home" className="px-5 py-14 md:py-20">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 lg:grid-cols-2">
           <div>
-
-            <div className="mb-6 inline-flex rounded-full border border-purple-400/20 bg-purple-500/10 px-4 py-2">
-              <span className="text-sm text-purple-300">
-                ✦ A safe space for students
-              </span>
+            <div className="mb-5 inline-flex rounded-full border border-green-200 bg-green-50 px-4 py-2 text-sm font-medium text-green-800">
+              {x.badge}
             </div>
 
+            <h1 className="max-w-3xl text-4xl font-bold leading-tight tracking-tight text-slate-900 md:text-6xl">
+              {x.hero1}
+              <span className="mt-2 block text-green-800">{x.hero2}</span>
+            </h1>
 
-            <h2 className="text-5xl font-bold leading-tight md:text-7xl">
-              You don't have to
-              <br />
-
-              <span className="bg-gradient-to-r from-purple-400 via-blue-400 to-cyan-400 bg-clip-text text-transparent">
-                handle everything
-              </span>
-
-              <br />
-
-              alone.
-            </h2>
-
-
-            <p className="mt-7 max-w-xl text-lg leading-8 text-gray-400">
-              SUKOONVAULT is a privacy-first support platform designed
-              to help students understand what they're going through
-              and find the right support when they need it.
+            <p className="mt-6 max-w-xl text-base leading-8 text-slate-600 md:text-lg">
+              {x.heroDescription}
             </p>
 
-
-            <div className="mt-9 flex flex-wrap gap-4">
-
-              <button className="rounded-full bg-gradient-to-r from-purple-500 to-cyan-400 px-8 py-4 font-semibold shadow-lg shadow-purple-500/20 transition hover:scale-105">
-                Get Support →
+            <div className="mt-7 flex flex-wrap gap-3">
+              <button
+                onClick={scrollToSupport}
+                className="rounded-xl bg-[#557c60] px-6 py-3 font-semibold text-white"
+              >
+                {x.talk}
               </button>
-
-              <button className="rounded-full border border-white/10 bg-white/5 px-8 py-4 font-semibold text-gray-300 transition hover:border-purple-400/50">
-                Learn More
-              </button>
-
+              <a
+                href="#how"
+                className="rounded-xl border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700"
+              >
+                {x.how}
+              </a>
             </div>
 
-
-            <div className="mt-10 flex gap-8 text-sm text-gray-500">
-              <span>🔒 Private</span>
-              <span>🤝 Human Support</span>
-              <span>24/7 Access</span>
+            <div className="mt-8 grid max-w-lg grid-cols-2 gap-3">
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="font-semibold">{x.private}</p>
+                <p className="mt-1 text-sm text-slate-500">{x.privateDesc}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4">
+                <p className="font-semibold">{x.guided}</p>
+                <p className="mt-1 text-sm text-slate-500">{x.guidedDesc}</p>
+              </div>
             </div>
-
           </div>
 
-
-          {/* RIGHT CHAT PREVIEW */}
-          <div className="relative">
-
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/20 to-cyan-500/20 blur-3xl" />
-
-            <div className="relative rounded-3xl border border-white/10 bg-white/[0.04] p-6 shadow-2xl backdrop-blur-xl">
-
-              <div className="flex items-center gap-4 border-b border-white/10 pb-5">
-
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-cyan-400">
-                  ☁
-                </div>
-
+          <div
+            id="support"
+            className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg md:p-6"
+          >
+            <div className="overflow-hidden rounded-xl border border-slate-200">
+              <div className="flex items-center justify-between border-b border-slate-200 bg-[#f4f6ed] px-5 py-4">
                 <div>
-                  <h3 className="font-semibold">
-                    Sukoon Assistant
-                  </h3>
+                  <h2 className="font-semibold text-slate-900">{t.assistantTitle}</h2>
+                  <p className="mt-1 text-xs text-slate-500">{x.conversation}</p>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-green-700">
+                  <span className="h-2 w-2 rounded-full bg-green-500" />
+                  {x.ready}
+                </div>
+              </div>
 
-                  <p className="text-xs text-green-400">
-                    ● Here to listen
+              <div
+                role="log"
+                aria-live="polite"
+                className="h-[360px] space-y-4 overflow-y-auto bg-white p-4 md:h-[410px] md:p-5"
+              >
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-4 py-3 text-sm leading-6 ${
+                        message.role === "user"
+                          ? "bg-[#557c60] text-white"
+                          : "border border-slate-200 bg-[#f4f6ed] text-slate-700"
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+                  </div>
+                ))}
+
+                {loading && (
+                  <div className="flex justify-start">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                      {x.thinking}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-slate-200 bg-white p-4">
+                <div className="flex items-end gap-2">
+                  <textarea
+                    value={input}
+                    onChange={(event) => setInput(event.target.value)}
+                    onKeyDown={handleKeyDown}
+                    rows={1}
+                    placeholder={x.placeholder}
+                    aria-label={x.placeholder}
+                    className="min-h-12 min-w-0 flex-1 resize-y rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 focus:border-green-700 focus:ring-2 focus:ring-green-100"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={toggleVoiceInput}
+                    disabled={loading}
+                    aria-label={isListening ? x.micStop : x.micStart}
+                    title={isListening ? x.micStop : x.micStart}
+                    className="shrink-0 rounded-xl px-3 py-3 font-semibold text-white disabled:opacity-50"
+                    style={{
+                      minWidth: "76px",
+                      minHeight: "48px",
+                      backgroundColor: isListening ? "#b42336" : "#557c60"
+                    }}
+                  >
+                    {isListening ? x.micStop : x.micStart}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={sendMessage}
+                    disabled={loading || !input.trim()}
+                    aria-label={t.send}
+                    className="shrink-0 rounded-xl bg-[#557c60] px-4 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {t.send}
+                  </button>
+                </div>
+
+                {voiceError && (
+                  <p className="mt-2 text-xs text-slate-600" role="status">
+                    {voiceError}
                   </p>
-                </div>
+                )}
 
+                <p className="mt-3 text-center text-xs text-slate-500">
+                  {x.disclaimer}
+                </p>
               </div>
-
-
-              <div className="space-y-5 py-6">
-
-                <div className="ml-auto max-w-[80%] rounded-2xl rounded-br-md bg-purple-500/20 p-4 text-sm">
-                  I've been feeling really overwhelmed lately.
-                </div>
-
-                <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-white/10 bg-white/5 p-4 text-sm leading-6 text-gray-300">
-                  I'm glad you reached out. You don't have to
-                  figure everything out at once. Let's take it
-                  one step at a time. 💜
-                </div>
-
-                <div className="max-w-[75%] rounded-2xl border border-cyan-400/10 bg-cyan-400/5 p-4 text-sm text-gray-300">
-                  What has been feeling the hardest recently?
-                </div>
-
-              </div>
-
-
-              <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-black/20 p-3">
-
-                <span className="flex-1 text-sm text-gray-500">
-                  Share what's on your mind...
-                </span>
-
-                <button className="rounded-xl bg-gradient-to-r from-purple-500 to-cyan-400 px-4 py-2">
-                  ↑
-                </button>
-
-              </div>
-
             </div>
-
           </div>
-
         </div>
-
       </section>
 
+      {sources.length > 0 && (
+        <section className="px-5 pb-8">
+          <div className="mx-auto max-w-5xl rounded-2xl border border-green-200 bg-green-50 p-5">
+            <h3 className="font-semibold text-slate-800">{x.ragTitle}</h3>
+            <p className="mt-2 text-sm text-slate-600">{x.ragDescription}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {sources.map((source, index) => (
+                <span
+                  key={source.id || source.title || index}
+                  className="rounded-full border border-green-200 bg-white px-3 py-1 text-xs text-green-800"
+                >
+                  {source.title}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* FEATURES */}
-      <section id="features" className="border-t border-white/5 px-6 py-28">
+      {riskLevel && (
+        <section className="px-5 pb-10">
+          <div className="mx-auto max-w-5xl">
+            <div
+              className={`rounded-2xl border p-6 ${
+                riskLevel === "high"
+                  ? "border-red-200 bg-red-50"
+                  : riskLevel === "moderate"
+                    ? "border-amber-200 bg-amber-50"
+                    : "border-green-200 bg-green-50"
+              }`}
+            >
+              <RiskBadge risk={riskLevel} language={language} />
 
+              {riskLevel === "mild" && (
+                <p className="text-sm leading-6 text-slate-700">{x.mild}</p>
+              )}
+
+              {riskLevel === "moderate" && (
+                <>
+                  <h2 className="text-xl font-semibold text-slate-900">{x.moderateTitle}</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">{x.moderateDescription}</p>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {counsellors.map((counsellor, index) => (
+                      <CounsellorCard
+                        key={counsellor.id || index}
+                        counsellor={counsellor}
+                        language={language}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {riskLevel === "high" && (
+                <>
+                  <h2 className="text-2xl font-bold text-red-800">{x.highTitle}</h2>
+                  <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-700">{x.highDescription}</p>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {emergencyResources.map((resource, index) => (
+                      <EmergencyCard
+                        key={resource.id || index}
+                        resource={resource}
+                        language={language}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-5 grid gap-3 md:grid-cols-2">
+                    {counsellors.map((counsellor, index) => (
+                      <CounsellorCard
+                        key={counsellor.id || index}
+                        counsellor={counsellor}
+                        language={language}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section id="dashboard" className="scroll-mt-24 px-5 py-10">
         <div className="mx-auto max-w-7xl">
-
-          <div className="mx-auto mb-16 max-w-2xl text-center">
-
-            <p className="mb-3 text-sm uppercase tracking-[0.3em] text-cyan-400">
-              What we offer
-            </p>
-
-            <h2 className="text-4xl font-bold md:text-5xl">
-              Support that meets you
-              <span className="text-purple-400"> where you are.</span>
-            </h2>
-
-            <p className="mt-5 text-gray-400">
-              Different situations need different kinds of support.
-            </p>
-
+          <p className="text-sm font-semibold uppercase tracking-widest text-green-700">{x.wellbeing}</p>
+          <h2 className="mt-2 text-3xl font-bold text-slate-900">{x.dashboard}</h2>
+          <p className="mt-2 text-slate-600">{x.checkinPrompt}</p>
+          <div className="mt-6">
+            <Dashboard />
           </div>
-
-
-          <div className="grid gap-6 md:grid-cols-3">
-
-            <FeatureCard
-              icon="✦"
-              title="AI-Guided Support"
-              text="A confidential first step to talk about what you're experiencing and understand possible next steps."
-            />
-
-            <FeatureCard
-              icon="♡"
-              title="Human Connection"
-              text="Connect with trusted counsellors and support services when talking to a person is what you need."
-            />
-
-            <FeatureCard
-              icon="🛡"
-              title="Crisis Resources"
-              text="Quick access to verified emergency resources and human support when immediate help is needed."
-            />
-
-          </div>
-
         </div>
-
       </section>
 
-
-      {/* HOW IT WORKS */}
-      <section id="how" className="bg-white/[0.02] px-6 py-28">
-
-        <div className="mx-auto max-w-6xl">
-
-          <div className="text-center">
-
-            <p className="text-sm uppercase tracking-[0.3em] text-purple-400">
-              Simple by design
-            </p>
-
-            <h2 className="mt-3 text-4xl font-bold">
-              How SUKOONVAULT works
-            </h2>
-
-          </div>
-
-
-          <div className="mt-16 grid gap-8 md:grid-cols-3">
-
-            <Step
-              number="01"
-              title="Check In"
-              description="Tell us what you're experiencing in a private and judgment-free space."
-            />
-
-            <Step
-              number="02"
-              title="Understand"
-              description="Get guidance based on your situation and understand possible next steps."
-            />
-
-            <Step
-              number="03"
-              title="Get Support"
-              description="Connect with the right human or professional support when needed."
-            />
-
-          </div>
-
+      <section className="px-5 py-10">
+        <div className="mx-auto max-w-7xl">
+          <CheckIn />
         </div>
-
       </section>
 
-
-      {/* ABOUT / PRIVACY */}
-      <section id="about" className="px-6 py-28">
-
-        <div className="mx-auto max-w-5xl rounded-3xl border border-purple-400/20 bg-gradient-to-br from-purple-500/10 to-cyan-500/5 p-10 text-center md:p-16">
-
-          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-purple-500/10 text-2xl">
-            🔒
-          </div>
-
-          <h2 className="text-3xl font-bold md:text-4xl">
-            Your privacy comes first.
-          </h2>
-
-          <p className="mx-auto mt-5 max-w-2xl leading-8 text-gray-400">
-            SUKOONVAULT is designed around privacy, dignity and
-            responsible support. Your identity should never be
-            the price of asking for help.
-          </p>
-
-          <p className="mt-8 text-lg font-medium text-purple-300">
-            "Your identity stays private. Your well-being doesn't have to wait."
-          </p>
-
+      <section className="px-5 py-10">
+        <div className="mx-auto max-w-7xl">
+          <MindGames />
         </div>
-
       </section>
 
+      <section className="px-5 py-10">
+        <div className="mx-auto max-w-7xl">
+          <Meditation />
+        </div>
+      </section>
 
-      {/* FOOTER */}
-      <footer className="border-t border-white/10 px-6 py-10">
+      <section id="features" className="px-5 py-16 md:py-20">
+        <div className="mx-auto max-w-7xl">
+          <p className="text-sm font-semibold uppercase tracking-widest text-green-700">{x.featureLabel}</p>
+          <h2 className="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">{x.featuresHeading}</h2>
+          <p className="mt-4 max-w-2xl leading-7 text-slate-600">{x.featuresDescription}</p>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            <FeatureCard
+              icon="◎"
+              title={t.aiGuidedTitle}
+              description={x.feature1}
+            />
+            <FeatureCard
+              icon="↗"
+              title={t.humanConnectionTitle}
+              description={x.feature2}
+            />
+            <FeatureCard
+              icon="＋"
+              title={t.crisisResourcesTitle}
+              description={x.feature3}
+            />
+          </div>
+        </div>
+      </section>
 
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-6 md:flex-row md:items-center">
-
+      <section id="how" className="border-y border-slate-200 bg-white px-5 py-16 md:py-20">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-2">
           <div>
-            <h2 className="font-bold">
-              SUKOON<span className="text-cyan-400">VAULT</span>
-            </h2>
-
-            <p className="mt-1 text-sm text-gray-500">
-              A safe space to breathe.
-            </p>
+            <p className="text-sm font-semibold uppercase tracking-widest text-green-700">{x.howLabel}</p>
+            <h2 className="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">{x.howHeading}</h2>
+            <p className="mt-4 max-w-xl leading-7 text-slate-600">{x.howDescription}</p>
           </div>
-
-          <p className="text-sm text-gray-600">
-            © 2026 SUKOONVAULT. Built for students.
-          </p>
-
+          <div className="space-y-8">
+            <Step number="01" title={t.stepCheckIn} description={x.step1} />
+            <Step number="02" title={t.stepUnderstand} description={x.step2} />
+            <Step number="03" title={t.stepGetSupport} description={x.step3} />
+          </div>
         </div>
+      </section>
 
+      <section id="about" className="px-5 py-16 md:py-20">
+        <div className="mx-auto max-w-4xl text-center">
+          <p className="text-sm font-semibold uppercase tracking-widest text-green-700">{x.about}</p>
+          <h2 className="mt-3 text-3xl font-bold text-slate-900 md:text-4xl">{x.aboutHeading}</h2>
+          <p className="mx-auto mt-6 max-w-2xl leading-8 text-slate-600">{x.aboutDescription}</p>
+        </div>
+      </section>
+
+      <footer className="border-t border-slate-200 bg-white px-5 py-8">
+        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 text-sm text-slate-500 md:flex-row">
+          <p>© 2026 SukoonVault. {x.footer}</p>
+          <p>{x.footerTagline}</p>
+        </div>
       </footer>
-
     </div>
-  )
+  );
 }
 
-
-/* FEATURE CARD */
-
-function FeatureCard({ icon, title, text }) {
-
-  return (
-    <div className="group rounded-3xl border border-white/10 bg-white/[0.03] p-8 transition duration-300 hover:-translate-y-2 hover:border-purple-400/30">
-
-      <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-purple-500/10 text-2xl">
-        {icon}
-      </div>
-
-      <h3 className="text-xl font-semibold">
-        {title}
-      </h3>
-
-      <p className="mt-4 leading-7 text-gray-400">
-        {text}
-      </p>
-
-      <button className="mt-6 text-sm font-medium text-purple-400">
-        Explore →
-      </button>
-
-    </div>
-  )
-}
-
-
-/* STEP CARD */
-
-function Step({ number, title, description }) {
-
-  return (
-    <div className="rounded-3xl border border-white/10 bg-[#0c0c17] p-8">
-
-      <span className="text-sm font-semibold text-cyan-400">
-        {number}
-      </span>
-
-      <h3 className="mt-5 text-2xl font-semibold">
-        {title}
-      </h3>
-
-      <p className="mt-4 leading-7 text-gray-400">
-        {description}
-      </p>
-
-    </div>
-  )
-}
-
-
-export default App
+export default App;
